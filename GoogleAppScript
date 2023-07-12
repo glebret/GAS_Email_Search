@@ -1,0 +1,56 @@
+function onOpen() {
+  var ui = SpreadsheetApp.getUi();
+  // Or DocumentApp or FormApp.
+  ui.createMenu('Recherche email')
+      .addItem('Lancer la recherche', 'Search')
+      .addToUi();
+}
+
+function Search() {
+  var sheet = SpreadsheetApp.getActiveSheet();
+  var row = 10;
+
+  // Clear existing search results
+  sheet.getRange(row, 1, sheet.getMaxRows() - 1, 4).clearContent();
+
+  // Which Gmail Label should be searched?
+  var label = "";
+
+  // Get hours min and hours max
+  var heuremin = parseInt(sheet.getRange('B2').getValue());
+  var heuremax = parseInt(sheet.getRange('B3').getValue());
+  
+  // Retrieve all threads of the specified label
+  var threads = GmailApp.search('in:' + label);
+  Logger.log(threads.length)
+  nbmess = 0;
+  for (var i = 0; i < threads.length; i++) {
+    var messages = threads[i].getMessages();
+    Logger.log("thread : " + String(i));
+    for (var m = 0; m < messages.length; m++) {
+      // Does the message is outside the hour ?
+      var date_time_email = messages[m].getDate();
+      if (date_time_email.getDay()==0 || date_time_email.getDay()==6 || parseInt(date_time_email.getHours()) < heuremin || (parseInt(date_time_email.getHours()) > heuremax)) {
+        Logger.log("hors horaire")
+        // Format and print the date of the matching message
+        sheet.getRange(row, 1).setValue(Utilities.formatDate(messages[m].getDate(), 'GMT', "yyyy.MM.dd G 'at' HH:mm:ss z"));
+        // Print the sender's name and email address
+        sheet.getRange(row, 2).setValue(messages[m].getFrom());
+
+        // Print the message subject
+        sheet.getRange(row, 3).setValue(messages[m].getSubject());
+
+        // Print the unique URL of the Gmail message
+        var id = '"https://mail.google.com/mail/u/0/#all/' + messages[m].getId() + '"';
+        sheet.getRange(row, 4).setFormula(id);
+
+        // log new mess
+        nbmess = nbmess + 1;
+        Logger.log(nbmess)
+        // Move to the next row
+        row++;
+      };
+      
+    }
+  }
+}
